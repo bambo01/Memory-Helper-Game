@@ -40,4 +40,23 @@ router.post("/", async (req, res) => {
 }
 });
 
+
+// GET /api/households?owner=0x123...
+router.get("/", async (req, res) => {
+  try {
+    const { owner } = req.query;
+
+    if (!owner) {
+      return res.status(400).json({ error: "Owner address is required" });
+    }
+
+    const households = await Household.find({ owner });
+
+    res.json(households);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch households" });
+  }
+});
+
 module.exports = router;

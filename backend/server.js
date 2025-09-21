@@ -1,7 +1,7 @@
 const express = require('express');
+require('dotenv').config();
 const mongoose = require('mongoose');
 const cors = require('cors');
-require('dotenv').config();
 
 // Import routes
 const flashcardsRoutes = require("./routes/flashcards");

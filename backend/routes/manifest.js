@@ -1,31 +1,33 @@
-import express from "express";
-import { NFTStorage, File } from "nft.storage";
+const express = require("express");
+const axios = require("axios");
 
 const router = express.Router();
 
-const client = new NFTStorage({ token: process.env.NFT_STORAGE_KEY });
+const PINATA_API_KEY = process.env.PINATA_API_KEY;
+const PINATA_SECRET_API_KEY = process.env.PINATA_SECRET_API_KEY;
 
 router.post("/", async (req, res) => {
   try {
-    const manifest = req.body; // { title, cards }
+    const manifest = req.body;
+    console.log("📤 Received manifest:", manifest);
 
-    // Convert manifest JSON to a File object
-    const files = [
-      new File(
-        [JSON.stringify(manifest, null, 2)],
-        "manifest.json",
-        { type: "application/json" }
-      )
-    ];
+    const url = "https://api.pinata.cloud/pinning/pinJSONToIPFS";
 
-    // Upload to NFT.Storage
-    const cid = await client.storeDirectory(files); // returns CID of the directory
+    const response = await axios.post(url, manifest, {
+      headers: {
+        pinata_api_key: PINATA_API_KEY,
+        pinata_secret_api_key: PINATA_SECRET_API_KEY,
+      },
+    });
 
-    res.json({ cid });
+    console.log("✅ Pinata response:", response.data);
+
+    res.json({ cid: response.data.IpfsHash });
   } catch (err) {
-    console.error("Error uploading manifest:", err);
+    console.error("❌ Error uploading manifest:", err.response?.data || err.message);
     res.status(500).json({ error: "Failed to upload manifest" });
   }
 });
 
-export default router;
+
+module.exports = router;

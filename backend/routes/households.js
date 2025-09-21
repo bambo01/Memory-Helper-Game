@@ -5,8 +5,9 @@ const Household = require("../models/household");
 // POST /api/households
 router.post("/", async (req, res) => {
   try {
-    const { tokenId, contract, cid, title, cards } = req.body;
-    if (!tokenId || !contract || !cid || !title || !cards) {
+        const { tokenId, contract, cid, title, cards, owner } = req.body;
+
+    if (!tokenId || !contract || !cid || !title || !cards || !owner) {
       return res.status(400).json({ error: "Missing fields" });
     }
 

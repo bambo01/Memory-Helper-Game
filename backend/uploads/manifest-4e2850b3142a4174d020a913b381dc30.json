@@ -1,0 +1,28 @@
+{
+  "title": "Cantero",
+  "cards": [
+    {
+      "id": "1758464371640",
+      "name": "Ders",
+      "relation": "Father",
+      "hint": "pogi",
+      "imageUrl": "/uploads/1758464388578-744825369.jpg",
+      "_id": "68d009844acaf69e9c2b7300",
+      "__v": 0,
+      "createdAt": "2025-09-21T14:19:48.582Z",
+      "updatedAt": "2025-09-21T14:19:48.582Z"
+    },
+    {
+      "id": "1758464386775",
+      "name": "susana",
+      "relation": "mather",
+      "hint": "panget",
+      "imageUrl": "/uploads/1758464388579-943176969.png",
+      "_id": "68d009844acaf69e9c2b7301",
+      "__v": 0,
+      "createdAt": "2025-09-21T14:19:48.583Z",
+      "updatedAt": "2025-09-21T14:19:48.583Z"
+    }
+  ],
+  "createdAt": "2025-09-21T14:19:48.638Z"
+}

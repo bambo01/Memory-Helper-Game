@@ -143,25 +143,22 @@ for (const [k, v] of fd.entries()) {
 }
 
 
-    const up = await fetch("/api/flashcards/batchUpsert", {
-      method: "POST",
-      body: fd
-    });
-    if (!up.ok) throw new Error("Upload failed.");
-    const saved = await up.json(); 
-
-    // 2) Build manifest -> get CID (title uses flashCardName)
     const man = await fetch("/api/manifest", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: flashCardName || "Family Pack",
-        cards: saved
-      })
-    });
-    const { cid } = await man.json();
-      console.log(cid);
-    if (!cid) throw new Error("No CID returned from manifest.");
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: flashCardName || "Family Pack",
+      cards: saved
+    })
+  });
+
+  const { cid } = await man.json();
+  console.log("📌 Manifest CID:", cid);
+
+  if (!cid) throw new Error("Manifest CID not returned");
+
+  alert("Manifest saved successfully!");
+
 
     // 3) Create Memory Pack on Base (first time)
     const txHash = await writeContractAsync({

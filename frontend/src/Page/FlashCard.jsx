@@ -12,9 +12,10 @@ import {
 import { useAccount } from "wagmi";
 
 // If your backend serves /uploads, point to it here (defaults to same origin)
-const API_BASE = import.meta?.env?.VITE_API_BASE_URL || window.location.origin;
+const API_BASE =
+  (import.meta?.env && import.meta.env.VITE_API_BASE_URL) || window.location.origin;
 
-/* -------------------- Demo fallback sets (unchanged) -------------------- */
+/* -------------------- Demo fallback sets -------------------- */
 const sets = {
   family: {
     id: "family",
@@ -117,10 +118,12 @@ export default function FlashCard() {
   const [showName, setShowName] = useState(false);
 
   // packs from DB
-  const [packs, setPacks] = useState([]); // [{tokenId, contract, cid, flashCardName?, createdAt}]
-  const [activePack, setActivePack] = useState(null); // the selected pack
+  const [packs, setPacks] = useState([]); // [{tokenId, contract, cid, flashCardName?, createdAt, owner?}]
+  const [activePack, setActivePack] = useState(null); // selected pack
   const [manifestTitle, setManifestTitle] = useState("");
   const [manifestCards, setManifestCards] = useState([]);
+
+  // UX
   const [loadingPacks, setLoadingPacks] = useState(false);
   const [loadingPack, setLoadingPack] = useState(false);
   const [err, setErr] = useState("");
@@ -133,12 +136,11 @@ export default function FlashCard() {
         setLoadingPacks(true);
         setErr("");
 
-        // If backend supports filtering by owner, keep the query below.
-        const res = await fetch(`/api/households?owner=${address ?? ""}`, {
+        // If backend supports filtering by owner (recommended):
+        const query = address ? `?owner=${address}` : "";
+        const res = await fetch(`/api/households${query}`, {
           credentials: "include",
         });
-
-        // Otherwise: const res = await fetch("/api/households", { credentials: "include" });
 
         if (!res.ok) throw new Error(`Failed to load packs: ${res.status}`);
         const rows = await res.json();
@@ -272,7 +274,7 @@ export default function FlashCard() {
           <div className="flex flex-wrap items-center gap-2">
             {packs.map((p) => (
               <button
-                key={p.tokenId}
+                key={`${p.contract}-${p.tokenId}`}
                 onClick={() => selectPack(p)}
                 className={`rounded-full px-3 py-1 text-sm border bg-white ${
                   activePack?.tokenId === p.tokenId

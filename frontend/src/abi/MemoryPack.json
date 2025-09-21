@@ -1,0 +1,38 @@
+[
+  {
+    "type": "function",
+    "name": "createPack",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "cid", "type": "string" },
+      { "name": "members", "type": "address[]" }
+    ],
+    "outputs": [{ "name": "tokenId", "type": "uint256" }]
+  },
+  {
+    "type": "function",
+    "name": "setCid",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "tokenId", "type": "uint256" },
+      { "name": "cid", "type": "string" }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "cidByTokenId",
+    "stateMutability": "view",
+    "inputs": [{ "name": "tokenId", "type": "uint256" }],
+    "outputs": [{ "type": "string" }]
+  },
+  {
+    "type": "event",
+    "name": "PackCreated",
+    "inputs": [
+      { "indexed": false, "name": "tokenId", "type": "uint256" },
+      { "indexed": true,  "name": "owner",   "type": "address"  },
+      { "indexed": false, "name": "cid",     "type": "string"   }
+    ]
+  }
+]

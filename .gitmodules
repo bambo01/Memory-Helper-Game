@@ -1,0 +1,3 @@
+[submodule "memory-pack/lib/forge-std"]
+	path = memory-pack/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std

@@ -5,10 +5,18 @@ const Household = require("../models/household");
 // POST /api/households
 router.post("/", async (req, res) => {
   try {
-        const { tokenId, contract, cid, title, cards, owner } = req.body;
+    const { tokenId, contract, cid, title, cards, owner } = req.body;
 
-    if (!tokenId || !contract || !cid || !title || !cards || !owner) {
-      return res.status(400).json({ error: "Missing fields" });
+    if (
+      !tokenId ||
+      !contract ||
+      !cid ||
+      !title ||
+      !owner ||
+      !Array.isArray(cards) ||
+      cards.length === 0
+    ) {
+      return res.status(400).json({ error: "Missing or empty fields" });
     }
 
     const household = new Household({
@@ -17,16 +25,19 @@ router.post("/", async (req, res) => {
       title, 
       cards,
       cid,
-      owner,
-      createdAt: new Date()
+      owner
     });
+
     await household.save();
 
-    res.json(household);
+    res.status(201).json(household);
   } catch (err) {
-    console.error("households error", err);
-    res.status(500).json({ error: "Failed to save household" });
+  console.error("households error", err);
+  if (err.name === "ValidationError") {
+    return res.status(400).json({ error: "Validation failed", details: err.errors });
   }
+  res.status(500).json({ error: "Failed to save household" });
+}
 });
 
 module.exports = router;

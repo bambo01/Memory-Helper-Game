@@ -237,7 +237,7 @@ export default function AddData() {
           tokenId,
           contract: CONTRACT_ADDRESS,
           cid,
-          flashCardName: flashCardName || "Family Pack",
+          title: flashCardName || "Family Pack",
           cards: saved,      // so your backend can link them if desired
           owner: account,    // <— save who minted/owns it
         }),

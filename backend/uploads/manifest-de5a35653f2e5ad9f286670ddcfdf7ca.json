@@ -1,0 +1,17 @@
+{
+  "title": "Cantero",
+  "cards": [
+    {
+      "id": "1758459943654",
+      "name": "Deren",
+      "relation": "Father",
+      "hint": "Pogi",
+      "imageUrl": "/uploads/1758459945208-135671837.jpg",
+      "_id": "68cff8294acaf69e9c2b72f5",
+      "__v": 0,
+      "createdAt": "2025-09-21T13:05:45.212Z",
+      "updatedAt": "2025-09-21T13:05:45.212Z"
+    }
+  ],
+  "createdAt": "2025-09-21T13:05:45.264Z"
+}

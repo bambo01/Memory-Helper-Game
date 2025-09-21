@@ -1,0 +1,17 @@
+{
+  "title": "Cantero Family",
+  "cards": [
+    {
+      "id": "1758459480106",
+      "name": "Deren",
+      "relation": "Father",
+      "hint": "Cantero",
+      "imageUrl": "/uploads/1758459482994-611633794.jpg",
+      "_id": "68cff65a4acaf69e9c2b72ed",
+      "__v": 0,
+      "createdAt": "2025-09-21T12:58:02.999Z",
+      "updatedAt": "2025-09-21T12:58:02.999Z"
+    }
+  ],
+  "createdAt": "2025-09-21T12:58:03.061Z"
+}

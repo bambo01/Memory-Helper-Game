@@ -16,6 +16,7 @@ router.post("/", async (req, res) => {
       title, 
       cards,
       cid,
+      owner,
       createdAt: new Date()
     });
     await household.save();

@@ -32,6 +32,7 @@ const householdSchema = new mongoose.Schema({
   },
   cards: [flashcardSchema], // An array of flashcard objects
   cid: { type: String, required: true },
+  owner: {type: String, required: true},
   createdAt: { type: Date, default: Date.now }
 });
 

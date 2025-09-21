@@ -30,27 +30,15 @@ router.post("/", async (req, res) => {
     const cid = pinataResponse.data.IpfsHash;
     console.log("✅ Pinata CID:", cid);
 
-    // 2️⃣ Save manifest to MongoDB
-    const newManifest = new Manifest({ title, cards, cid });
-    await newManifest.save();
-
-    // 3️⃣ Respond with CID
-    res.status(201).json({ message: "Manifest saved", cid });
+    // 2️⃣ Respond with CID only (no database save)
+    res.status(201).json({ message: "Manifest pinned to IPFS", cid });
 
   } catch (err) {
-    console.error("❌ Error saving manifest:", err);
-
-    if (err.name === "ValidationError") {
-      const details = Object.values(err.errors).map(e => e.message);
-      return res.status(400).json({ error: "Validation failed", details });
-    }
-
-    if (err.code === 11000) {
-      return res.status(409).json({ error: "Duplicate CID", details: "Manifest already exists" });
-    }
+    console.error("❌ Error pinning manifest:", err);
 
     res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
 });
+
 
 module.exports = router;

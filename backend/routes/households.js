@@ -59,4 +59,40 @@ router.get("/", async (req, res) => {
   }
 });
 
+
+router.get("/byToken/:tokenId", async (req, res) => {
+  const { tokenId } = req.params;
+
+  try {
+    // Find the household by tokenId
+    const household = await Household.findOne({ tokenId: Number(tokenId) });
+
+    if (!household) {
+      return res.status(404).json({ error: "Household not found" });
+    }
+
+    // Map cards to the frontend-friendly structure
+    const cards = (household.cards || []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      relation: c.relation,
+      hint: c.hint,
+      image: c.imageUrl, // use imageUrl as the frontend expects `image`
+    }));
+
+    res.json({
+      tokenId: household.tokenId,
+      contract: household.contract,
+      title: household.title,
+      cid: household.cid,
+      owner: household.owner,
+      createdAt: household.createdAt,
+      cards,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 module.exports = router;

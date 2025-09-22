@@ -21,7 +21,7 @@ const Home = () => {
              hover:border-[#E7B904] hover:border-3 
              focus:outline-none focus:ring-2 focus:ring-blue-500 
              transition-all duration-300 lg:w-100"
-            onClick={() => navigate("/user/quiz")}
+            onClick={() => navigate("/user/packs")}
           >
             <div className="flex flex-col items-center gap-3 text-center text-2xl drop-shadow-lg">
               <img src="/quizA.png" alt="Quiz Mode" className="w-80 mx-auto" />

@@ -17,6 +17,8 @@ import AddFlashCard from "./Page/AddFlashCard";
 import FlashCard from "./Page/FlashCard";
 import EditData from "./Component/EditData";
 import LandingPage from "./Page/LandingPage";
+import PackPicker from "./Component/Quiz/PackPicker";
+import QuizPage from "./Component/Quiz/QuizPage";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -36,6 +38,12 @@ const router = createBrowserRouter(
         <Route path="add" element={<AddFlashCard />} />
          <Route path="flashcard" element={<FlashCard />} />
          <Route path="edit" element={<EditData />} />
+
+         <Route path="packs" element={<PackPicker />} />
+          
+         <Route path="quiz/:tokenId" element={<QuizPage />} />  
+        
+
         <Route path="quiz" element={<Quiz />} />
       </Route>
 

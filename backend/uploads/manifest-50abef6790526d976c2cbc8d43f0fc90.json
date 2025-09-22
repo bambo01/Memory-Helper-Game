@@ -1,0 +1,17 @@
+{
+  "title": "pangan",
+  "cards": [
+    {
+      "id": "1758467848046",
+      "name": "bam",
+      "relation": "father",
+      "hint": "pogi",
+      "imageUrl": "/uploads/1758467849572-249762344.jpg",
+      "_id": "68d017094acaf69e9c2b730f",
+      "__v": 0,
+      "createdAt": "2025-09-21T15:17:29.574Z",
+      "updatedAt": "2025-09-21T15:17:29.574Z"
+    }
+  ],
+  "createdAt": "2025-09-21T15:17:29.625Z"
+}

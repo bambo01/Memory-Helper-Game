@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { MdVolumeUp, MdLightbulb, MdSkipNext, MdReplay, MdCheckCircle, MdClose } from "react-icons/md";
 
+
 const sampleCards = [
   {
     id: "susan",

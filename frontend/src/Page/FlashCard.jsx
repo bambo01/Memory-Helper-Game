@@ -11,9 +11,11 @@ import {
 } from "react-icons/md";
 import { useAccount } from "wagmi";
 
+
 // If your backend serves /uploads, point to it here (defaults to same origin)
 const API_BASE =
   (import.meta?.env && import.meta.env.VITE_API_BASE_URL) || window.location.origin;
+  
 
 /* -------------------- Demo fallback sets -------------------- */
 const sets = {
@@ -130,84 +132,65 @@ export default function FlashCard() {
 
   /* ---- Load user packs from your DB ---- */
   useEffect(() => {
-    let cancelled = false;
-    async function loadPacks() {
-      try {
-        setLoadingPacks(true);
-        setErr("");
-
-        // If backend supports filtering by owner (recommended):
-        const query = address ? `?owner=${address}` : "";
-        const res = await fetch(`/api/households${query}`, {
-          credentials: "include",
-        });
-
-        if (!res.ok) throw new Error(`Failed to load packs: ${res.status}`);
-        const rows = await res.json();
-
-        if (cancelled) return;
-
-        // newest first (optional)
-        const sorted = (rows || []).sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        );
-        setPacks(sorted);
-      } catch (e) {
-        console.error(e);
-        setErr(e.message || "Failed to load packs.");
-      } finally {
-        if (!cancelled) setLoadingPacks(false);
-      }
-    }
-    loadPacks();
-    return () => {
-      cancelled = true;
-    };
-  }, [address]);
-
-  /* ---- Select a pack → fetch manifest from IPFS via its CID ---- */
-  async function selectPack(pack) {
+  let cancelled = false;
+  async function loadPacks() {
     try {
-      setLoadingPack(true);
+      setLoadingPacks(true);
       setErr("");
-      setActivePack(pack);
-      setIndex(0);
-      setShowName(false);
 
-      const url = ipfsToHttp(`ipfs://${pack.cid}`);
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`Failed to fetch manifest: ${resp.status}`);
-      const manifest = await resp.json();
+      const query = address ? `?owner=${address}` : "";
+      const res = await fetch(`/api/households${query}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`Failed to load packs: ${res.status}`);
+      const rows = await res.json();
+      if (cancelled) return;
 
-      setManifestTitle(
-        manifest.title || pack.flashCardName || `Pack #${pack.tokenId}`
+      const sorted = (rows || []).sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
-
-      const normalized = (manifest.cards || []).map((c) => ({
-        id: c.id || Math.random().toString(36).slice(2),
-        name: c.name || "",
-        relation: c.relation || "",
-        hint: c.hint || "",
-        image: toAbsolute(c.imageUrl || c.image || ""),
-      }));
-
-      setManifestCards(normalized);
+      setPacks(sorted);
     } catch (e) {
       console.error(e);
-      setErr(e.message || "Failed to load pack.");
+      setErr(e.message || "Failed to load packs.");
     } finally {
-      setLoadingPack(false);
+      if (!cancelled) setLoadingPacks(false);
     }
   }
+  loadPacks();
+  return () => {
+    cancelled = true;
+  };
+}, [address]);
+
+
+  /* ---- Select a pack → fetch manifest from IPFS via its CID ---- */
+ async function selectPack(pack) {
+  setActivePack(pack);
+  setIndex(0);
+  setShowName(false);
+
+  setManifestTitle(pack.title || `Pack #${pack.tokenId}`);
+  const normalized = (pack.cards || []).map((c) => ({
+    id: c.id,
+    name: c.name,
+    relation: c.relation,
+    hint: c.hint,
+    image: toAbsolute(c.imageUrl),  // resolve /uploads path
+  }));
+  setManifestCards(normalized);
+}
+
 
   /* ---- Decide whether to show pack cards or demo set ---- */
-  const { cards, title } = useMemo(() => {
-    if (activePack) {
-      return { cards: manifestCards, title: manifestTitle };
-    }
-    const s = sets[setId];
-    return { cards: s.cards, title: s.label };
-  }, [activePack, manifestCards, manifestTitle, setId]);
+ const { cards, title } = useMemo(() => {
+  if (activePack) {
+    return { cards: manifestCards, title: manifestTitle };
+  }
+  const s = sets[setId];
+  return { cards: s.cards, title: s.label };
+}, [activePack, manifestCards, manifestTitle, setId]);
+
 
   const card = cards[index];
 
@@ -219,7 +202,7 @@ export default function FlashCard() {
       const u = new SpeechSynthesisUtterance(card.name);
       u.rate = 0.95;
       window.speechSynthesis.speak(u);
-    } catch {}
+    } catch {null}
   }, [card?.name]);
 
   useEffect(() => {
@@ -254,8 +237,8 @@ export default function FlashCard() {
 
   /* -------------------- UI -------------------- */
   return (
-    <div className="mx-auto max-w-3xl p-4">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <div className="mx-auto max-w-3xl p-4 mt-10">
+      <div className="mb-4 hidden items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{title || "Flashcards"}</h1>
         <Link
           to="/user/edit"
@@ -272,20 +255,21 @@ export default function FlashCard() {
           <div className="text-xs opacity-70">Loading packs…</div>
         ) : packs.length ? (
           <div className="flex flex-wrap items-center gap-2">
-            {packs.map((p) => (
-              <button
-                key={`${p.contract}-${p.tokenId}`}
-                onClick={() => selectPack(p)}
-                className={`rounded-full px-3 py-1 text-sm border bg-white ${
-                  activePack?.tokenId === p.tokenId
-                    ? "border-[#E7B904]"
-                    : "border-[#4D4D4D] hover:border-[#E7B904]"
-                }`}
-                title={`tokenId #${p.tokenId}`}
-              >
-                {p.flashCardName || `Pack #${p.tokenId}`}
-              </button>
-            ))}
+           {packs.map((p) => (
+  <button
+    key={`${p.contract}-${p.tokenId}`}
+    onClick={() => selectPack(p)}
+    className={`rounded-full px-3 py-1 text-sm border bg-white ${
+      activePack?.tokenId === p.tokenId
+        ? "border-[#E7B904]"
+        : "border-[#4D4D4D] hover:border-[#E7B904]"
+    }`}
+    title={`tokenId #${p.tokenId}`}
+  >
+    {p.title || `Pack #${p.tokenId}`}
+  </button>
+))}
+
           </div>
         ) : (
           <div className="text-xs opacity-70">
@@ -296,7 +280,7 @@ export default function FlashCard() {
 
       {/* Fallback demo sets (only if no active real pack) */}
       {!activePack && (
-        <div className="mb-4">
+        <div className="mb-4 hidden">
           <div className="mb-2 text-sm opacity-70">Sample Sets</div>
           <div className="flex flex-wrap items-center gap-2">
             {Object.values(sets).map((s) => (
@@ -335,12 +319,17 @@ export default function FlashCard() {
         <div className="relative aspect-[16/9] w-full bg-zinc-100">
           {card?.image ? (
             <img
-              src={card.image}
-              alt={`${card.name || "Unknown"}${
-                card.relation ? ` (${card.relation})` : ""
-              }`}
-              className="h-full w-full object-cover"
-            />
+  src={card?.image}
+  loading="lazy"
+  onError={(e) => { e.currentTarget.src = `${API_BASE}/uploads/placeholder.jpg`; }}
+  alt={
+    card
+      ? [card.name, card.relation].filter(Boolean).join(" – ")
+      : "Flashcard image"
+  }
+  className="h-full w-full object-cover"
+/>
+
           ) : (
             <div className="flex h-full items-center justify-center text-sm opacity-60">
               No image

@@ -12,7 +12,7 @@ import {
   useSwitchChain,
 } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
-import { decodeEventLog } from "viem";
+ import { decodeEventLog, parseEventLogs } from "viem";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../contract";
 import { useNavigate } from "react-router-dom";
 
@@ -109,155 +109,148 @@ export default function AddData() {
   }
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    if (!isConnected) return setError("Please connect your wallet first.");
-    if (!cards.length) return setError("Please add at least one flashcard.");
+  e.preventDefault();
+  if (!isConnected) return setError("Please connect your wallet first.");
+  if (!cards.length) return setError("Please add at least one flashcard.");
 
-    setSaving(true);
-    setError("");
+  setSaving(true);
+  setError("");
+
+  try {
+    // --- Phase 1: upload images + meta ---
+    console.log("→ uploading cards…");
+    const fd = new FormData();
+    fd.append(
+      "meta",
+      JSON.stringify(
+        cards.map((c) => ({
+          id: String(c.id),
+          name: c.name,
+          relation: c.relation || "",
+          hint: c.hint || "",
+        }))
+      )
+    );
+    cards.forEach((c, i) => {
+      if (c.file) fd.append(`image_${i}`, c.file, c.file.name || `card-${i}.jpg`);
+    });
+
+    const up = await fetch("/api/flashcards/batchUpsert", { method: "POST", body: fd });
+    if (!up.ok) throw new Error("Upload failed.");
+    const saved = await up.json();
+    console.log("✓ uploaded:", saved);
+
+    // --- Phase 2: build manifest -> CID (IPFS only) ---
+    console.log("→ building manifest…");
+    const man = await fetch("/api/manifest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: flashCardName || "Family Pack",
+        cards: saved,
+      }),
+    });
+    const { cid } = await man.json();
+    if (!cid) throw new Error("Manifest CID not returned.");
+    console.log("✓ CID:", cid, `https://ipfs.io/ipfs/${cid}`);
+
+    // --- Network guard: ensure Base Sepolia ---
+    if (chainId !== baseSepolia.id) {
+      console.log("→ switching to Base Sepolia…");
+      await switchChainAsync({ chainId: baseSepolia.id });
+      console.log("✓ on Base Sepolia");
+    }
+
+    // --- Phase 3: on-chain createPack(cid, []) ---
+    console.log("→ simulating tx…");
+    const { request } = await publicClient.simulateContract({
+      account: account,
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "createPack",
+      args: [cid, []],
+    });
+
+    console.log("→ sending tx to Base Sepolia…");
+    const txHash = await writeContractAsync(request);
+    console.log("✓ tx hash:", txHash, `https://sepolia-explorer.base.org/tx/${txHash}`);
+
+    // --- Phase 4 (compact): confirm + get tokenId ---
+    console.log("→ waiting for receipt…");
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+
+    const ZERO = "0x0000000000000000000000000000000000000000";
+    let tokenId;
 
     try {
-      // --- Phase 1: upload images + meta (no DB yet) ---
-      console.log("→ uploading cards…");
-      const fd = new FormData();
-      fd.append(
-        "meta",
-        JSON.stringify(
-          cards.map((c) => ({
-            id: String(c.id),
-            name: c.name,
-            relation: c.relation || "",
-            hint: c.hint || "",
-          }))
-        )
-      );
-      cards.forEach((c, i) => {
-        if (c.file) fd.append(`image_${i}`, c.file, c.file.name || `card-${i}.jpg`);
+      const transfers = parseEventLogs({
+        abi: CONTRACT_ABI,
+        logs: receipt.logs,
+        eventName: "Transfer",
       });
+      const mint = transfers.find((e) => String(e.args?.from).toLowerCase() === ZERO);
+      if (mint) tokenId = Number(mint.args.tokenId);
+    } catch {null}
 
-      const up = await fetch("/api/flashcards/batchUpsert", { method: "POST", body: fd });
-      if (!up.ok) throw new Error("Upload failed.");
-      const saved = await up.json(); // [{ id, name, relation, hint, imageUrl }]
-      console.log("✓ uploaded:", saved);
+    if (tokenId == null) {
+      try {
+        const [pc] = parseEventLogs({
+          abi: CONTRACT_ABI,
+          logs: receipt.logs,
+          eventName: "PackCreated",
+        });
+        if (pc) tokenId = Number(pc.args.tokenId);
+      } catch {}
+    }
 
-      // --- Phase 2: build manifest -> CID (IPFS only) ---
-      console.log("→ building manifest…");
-      const man = await fetch("/api/manifest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: flashCardName || "Family Pack",
-          cards: saved,
-        }),
-      });
-      const { cid } = await man.json();
-      if (!cid) throw new Error("Manifest CID not returned.");
-      console.log("✓ CID:", cid, `https://ipfs.io/ipfs/${cid}`);
+    if (tokenId == null) throw new Error("Minted tokenId not found in logs.");
+    console.log("✓ tokenId:", tokenId);
 
-      // --- Network guard: ensure Base Sepolia ---
-      if (chainId !== baseSepolia.id) {
-        console.log("→ switching to Base Sepolia…");
-        await switchChainAsync({ chainId: baseSepolia.id });
-        console.log("✓ on Base Sepolia");
-      }
-
-      // --- Phase 3: on-chain createPack(cid, []) ---
-      console.log("→ simulating tx…");
-      const { request } = await publicClient.simulateContract({
-        account: account,
+    // Optional: read tokenURI (non-blocking)
+    try {
+      const onchainUri = await publicClient.readContract({
         address: CONTRACT_ADDRESS,
         abi: CONTRACT_ABI,
-        functionName: "createPack",
-        args: [cid, []],
+        functionName: "tokenURI",
+        args: [tokenId],
       });
-
-      console.log("→ sending tx to Base Sepolia…");
-      const txHash = await writeContractAsync(request);
-      console.log("✓ tx hash:", txHash, `https://sepolia-explorer.base.org/tx/${txHash}`);
-
-      // --- Phase 4: wait + parse logs (Transfer is the ground truth) ---
-      console.log("→ waiting for receipt…");
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-
-      let tokenIdFromTransfer = null;
-      let tokenIdFromPackCreated = null;
-
-      for (const log of receipt.logs) {
-        try {
-          const { eventName, args } = decodeEventLog({
-            abi: CONTRACT_ABI,
-            data: log.data,
-            topics: log.topics,
-          });
-
-          // ERC721 Transfer(from, to, tokenId)
-          if (
-            eventName === "Transfer" &&
-            String(args?.from).toLowerCase() ===
-              "0x0000000000000000000000000000000000000000"
-          ) {
-            tokenIdFromTransfer = Number(args.tokenId);
-          }
-
-          if (eventName === "PackCreated") {
-            tokenIdFromPackCreated = Number(args.tokenId);
-          }
-        } catch {
-          // ignore non-matching logs
-        }
-      }
-
-      const tokenId = tokenIdFromTransfer ?? tokenIdFromPackCreated;
-      if (tokenId == null) {
-        throw new Error("Minted tokenId not found in logs.");
-      }
-      console.log("✓ tokenId:", tokenId);
-
-      // --- Optional: read tokenURI, but don't block flow ---
-      try {
-        const onchainUri = await publicClient.readContract({
-          address: CONTRACT_ADDRESS,
-          abi: CONTRACT_ABI,
-          functionName: "tokenURI",
-          args: [tokenId],
-        });
-        console.log("→ tokenURI:", onchainUri);
-      } catch (uriErr) {
-        // This can fail on some RPCs immediately after mint; not fatal
-        console.warn("tokenURI not readable yet:", uriErr?.message);
-      }
-
-      // --- Phase 5: persist everything now that it's on-chain ---
-      console.log("→ saving to DB…");
-      const saveRes = await fetch("/api/households", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          tokenId,
-          contract: CONTRACT_ADDRESS,
-          cid,
-          title: flashCardName || "Family Pack",
-          cards: saved,      // so your backend can link them if desired
-          owner: account,    // <— save who minted/owns it
-        }),
-      });
-      if (!saveRes.ok) {
-        const t = await saveRes.text();
-        throw new Error(`Backend save failed: ${t || saveRes.status}`);
-      }
-      const savedDoc = await saveRes.json();
-      console.log("✓ saved household:", savedDoc);
-
-      alert(`Created Memory Pack #${tokenId} on Base ✅`);
-      navigate("/user"); // or navigate(`/packs/${tokenId}`)
-    } catch (err) {
-      console.error(err);
-      setError(err?.shortMessage || err?.message || "Failed to create memory pack.");
-    } finally {
-      setSaving(false);
+      console.log("→ tokenURI:", onchainUri);
+    } catch (uriErr) {
+      console.warn("tokenURI not readable yet:", uriErr?.message);
     }
+
+    // --- Phase 5: persist everything now that it's on-chain ---
+    console.log("→ saving to DB…");
+    const saveRes = await fetch("/api/households", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        tokenId,
+        contract: CONTRACT_ADDRESS,
+        cid,
+        title: flashCardName || "Family Pack",
+        cards: saved,
+        owner: account,
+      }),
+    });
+    if (!saveRes.ok) {
+      const t = await saveRes.text();
+      throw new Error(`Backend save failed: ${t || saveRes.status}`);
+    }
+    const savedDoc = await saveRes.json();
+    console.log("✓ saved household:", savedDoc);
+
+    alert(`Created Memory Pack #${tokenId} on Base ✅`);
+    navigate("/user");
+  } catch (err) {
+    console.error(err);
+    setError(err?.shortMessage || err?.message || "Failed to create memory pack.");
+  } finally {
+    setSaving(false);
   }
+}
+
 
   useEffect(() => {
     return () => {
